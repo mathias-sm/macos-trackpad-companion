@@ -31,5 +31,6 @@ pub mod status_item;
 pub mod system_prefs;
 pub mod time;
 pub mod update;
+pub mod usb_launch;
 mod tuning_slider;
 mod window_lifecycle;
