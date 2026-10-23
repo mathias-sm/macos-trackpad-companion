@@ -24,6 +24,7 @@ pub mod pause;
 pub mod permissions;
 pub mod report;
 mod run_loop_timer;
+mod tap_drag;
 pub mod scan_clock;
 pub mod scope;
 pub mod settings;

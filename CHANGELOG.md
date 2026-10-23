@@ -17,6 +17,8 @@ rather than a per-version one, so it is not duplicated here.
 
 ### Added
 
+- Single-finger tap-then-drag for text selection and dragging without a
+  physical button, releasing immediately when the finger lifts.
 - Optional USB-triggered startup and exit on unplug, using a per-user
   LaunchAgent and IOKit notifications. The setup script preserves the config
   path, installs a stable app copy, and supports permission-reopen recovery.

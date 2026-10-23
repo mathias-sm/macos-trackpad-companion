@@ -1022,6 +1022,11 @@ pub trait Output {
     /// path and chained with [`Self::click`] (a tap followed by a
     /// quick hardware press counts as one multi-click sequence).
     fn set_left_button_held(&self, held: bool);
+    /// Start character-level tap dragging. Unlike a hardware re-press, this
+    /// continues the first tap's selection rather than double-clicking a word.
+    fn begin_tap_drag(&self) {
+        self.set_left_button_held(true);
+    }
     fn scroll(&self, dx_mm: f64, dy_mm: f64, phase: Phase);
     /// Seed scroll inertia from a just-ended pan. `vx_mm_per_sec` and
     /// `vy_mm_per_sec` are the EMA-smoothed centroid velocity at lift.
@@ -1109,6 +1114,9 @@ impl<O: Output> Output for OverlayOutput<O> {
     }
     fn set_left_button_held(&self, held: bool) {
         self.inner.set_left_button_held(held);
+    }
+    fn begin_tap_drag(&self) {
+        self.inner.begin_tap_drag();
     }
     fn scroll(&self, dx_mm: f64, dy_mm: f64, phase: Phase) {
         if matches!(phase, Phase::Began) {
@@ -1332,6 +1340,9 @@ impl Emitter {
         };
         e.set_int(kCGMouseEventDeltaX, i64::from(dx_px));
         e.set_int(kCGMouseEventDeltaY, i64::from(dy_px));
+        if let Some(count) = self.left_button_held.get() {
+            e.set_int(kCGMouseEventClickState, count);
+        }
         unsafe { CGEventSetTimestamp(e.0, self.event_timestamp().as_nanos()) };
         log::trace!(
             "post: {} d=({:+},{:+})px to=({:.0},{:.0})",
@@ -1374,9 +1385,17 @@ impl Emitter {
             let c = self.left_button_held.replace(None).unwrap_or(1);
             (kCGEventLeftMouseUp, c)
         };
+        self.post_left_button(event_type, count, p, now);
+    }
+
+    fn post_left_button(&self, event_type: u32, count: i64, p: CGPoint, now: Timestamp) {
         log::debug!(
             "post: leftMouse{} count={} at=({:.0},{:.0})",
-            if held { "Down" } else { "Up" },
+            if event_type == kCGEventLeftMouseDown {
+                "Down"
+            } else {
+                "Up"
+            },
             count,
             p.x,
             p.y,
@@ -1388,6 +1407,24 @@ impl Emitter {
             unsafe { CGEventSetTimestamp(e.0, now.as_nanos()) };
             e.post();
         }
+    }
+
+    pub fn begin_tap_drag(&self) {
+        if self.left_button_held.get().is_some() {
+            return;
+        }
+        // A tap already emitted a click. Counting the drag press as its
+        // second click would turn character selection into word selection.
+        // The drag also ends the multi-click sequence; its matching move/up
+        // events use the count stored with the held button.
+        self.last_click.set(None);
+        self.left_button_held.set(Some(1));
+        self.post_left_button(
+            kCGEventLeftMouseDown,
+            1,
+            self.cursor(),
+            self.event_timestamp(),
+        );
     }
 
     /// Decide the `kCGMouseEventClickState` for a fresh press of `button`
@@ -2154,6 +2191,9 @@ impl Output for Emitter {
     }
     fn set_left_button_held(&self, held: bool) {
         Emitter::set_left_button_held(self, held);
+    }
+    fn begin_tap_drag(&self) {
+        Emitter::begin_tap_drag(self);
     }
     fn scroll(&self, dx_mm: f64, dy_mm: f64, phase: Phase) {
         Emitter::scroll(self, dx_mm, dy_mm, phase);

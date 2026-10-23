@@ -110,6 +110,23 @@ the field-4205 approach in [iss](https://github.com/joshuarli/iss/blob/master/is
 (0BSD), and the independent macOS 27 IOHID path in
 [Mac Mouse Fix](https://github.com/noah-nuebling/mac-mouse-fix/blob/master/Helper/Core/Touch/TouchSimulator.m).
 
+## Select text without a physical click
+
+Tap once, lift, then touch again nearby within 300 ms and keep that finger
+down while dragging. The second touch must land within 3 mm of the first.
+A quick second tap remains a normal double-click; movement beyond the tap
+budget or holding the second touch beyond the tap window starts a drag.
+Lifting releases immediately, without a drag lock or repositioning delay.
+This behavior is built into the companion and requires no config change.
+
+`tap_drag.rs` recognizes the follow-up touch; `gesture.rs` drives the
+existing held-button output. The drag press uses click count 1 so selecting
+text works at character level instead of being interpreted as a word-selecting
+double-click. Pause, disconnect, rejected contacts, and shutdown release the
+button. Adding a finger ends the drag; ordinary two-finger scrolling and
+three-finger swipes remain available. Regression tests cover these paths,
+and the user confirmed text selection and immediate release on this setup.
+
 ## Start on USB connection, stop when unplugged
 
 For infrequent use, follow the [USB startup instructions](../README.md#start-only-when-a-usb-trackpad-is-attached).
@@ -131,6 +148,8 @@ a battery-power measurement.
 
 The installed app needs its own privacy grants. Add the `.app` in the
 user's `~/Applications` folder, not the staged bundle or its inner binary.
+After a local ad-hoc-signed rebuild, macOS may require both grants to be
+renewed even when the app remains at the same path.
 After a privacy dialog's **Quit & Reopen**, macOS can reopen a separate
 copy without the config and USB-lifetime arguments. If that copy holds the
 lock, the USB job exits as a duplicate and the app may remain after unplug.
@@ -151,8 +170,9 @@ python3 scripts/test_usb_autostart.py
 cargo build --release --locked --bin companion
 ```
 
-Human testing covered pointer movement, two-finger scroll, pinch, continuous
-three-finger swipes in all four directions, and USB activation/removal on
+Human testing covered pointer movement, tap-then-drag text selection with
+immediate release, two-finger scroll, pinch, continuous three-finger swipes
+in all four directions, and USB activation/removal on
 one HongMall and one macOS 27.0.1 host. Reboot persistence is configured but
 has not been physically tested. Other hardware, older macOS runtimes, both
 natural-scroll settings, extended sleep/wake use, and long-term stability

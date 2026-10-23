@@ -19,6 +19,14 @@ learned into a nice spec and develop a high-quality codebase from it.
 For HongMall P-T066 (`048D:8911`) setup, macOS 27 swipe failures, and
 USB-triggered startup, see [the device and troubleshooting guide](docs/hongmall-macos27.md).
 
+To select text or drag an item without a physical button, tap once, then
+touch again nearby within 300 ms and keep that finger down while moving.
+A quick second tap still double-clicks. Lifting your finger releases the
+button immediately, with no drag lock or repositioning delay. This
+recognition is built into the companion and does not change macOS's
+trackpad settings. Two-finger scrolling and three-finger swipes remain
+available; adding a finger during an active drag ends that drag.
+
 ## Build & run
 
 The primary artifact is a menu-bar app bundle:
@@ -643,6 +651,7 @@ on separate interfaces.
 | `descriptor.rs` | Walks a HID report descriptor and extracts the touch-report `Layout` (contact count, X/Y max, field offsets). |
 | `report.rs` | Decodes one input-report buffer into a `Frame` of normalized contacts. |
 | `gesture.rs` | Pure state machine — classifies 1F/2F/3F/4F gestures, locks 2F mode on first significant motion. Tested without I/O. |
+| `tap_drag.rs` | Single-finger tap-then-drag recognition, with immediate release on lift. |
 | `output.rs` | macOS event synthesis. Public CGEvent for cursor/click/scroll, private CGEvent type/field IDs for pinch/rotate/swipe. |
 | `hid.rs` | IOHIDManager FFI: device matching, descriptor + input-report subscription, run-loop pumping. |
 | `app_kit.rs` | Shared `NSApp` bring-up (accessory policy) and the `[NSApp run]` event loop, plus the cross-thread stop. |
